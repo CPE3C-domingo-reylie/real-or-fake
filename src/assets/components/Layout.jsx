@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "../../styles/layout.css";
+import Footer from "./Footer";
 
 export default function Layout({ children }) {
   const canvasRef = useRef(null);
@@ -81,38 +82,6 @@ export default function Layout({ children }) {
       )
     },
     {
-      to: "/how-it-works",
-      label: "How It Works",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-      )
-    },
-    {
-      to: "/terms",
-      label: "Terms & Conditions",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-        </svg>
-      )
-    },
-    {
-      to: "/privacy",
-      label: "Privacy Policy",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        </svg>
-      )
-    },
-    {
       to: "/contacts",
       label: "Contacts",
       icon: (
@@ -123,7 +92,6 @@ export default function Layout({ children }) {
       )
     },
   ];
-
   const logoIcon = (
     <div className="logo-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -186,6 +154,7 @@ export default function Layout({ children }) {
           </header>
           <main className="page-main">
             {children}
+            <Footer />
           </main>
         </div>
 
