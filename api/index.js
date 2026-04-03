@@ -26,9 +26,6 @@ app.use('/api/news', newsRoutes);
 // Mount analysis routes at /api/news/analyze
 app.use('/api/news/analyze', analyzeRoutes);
 
-console.log('Guardian API Key loaded:', !!config.GUARDIAN_API_KEY);
-console.log('First few chars:', config.GUARDIAN_API_KEY?.substring(0, 5));
-
 app.get('/api/health', async (req, res) => {
     try {
         await pool.query('SELECT 1');
