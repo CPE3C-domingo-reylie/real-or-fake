@@ -7,11 +7,15 @@ import './css/apitester.css'
 const API_BASE = 'http://localhost:3006'
 
 // ==================== REUSABLE API CALL FUNCTION ====================
-const callApi = async (method, endpoint, body = null) => {
+const callApi = async (method, endpoint, body = null, token = null) => {
   try {
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
     const options = {
       method,
-      headers: { 'Content-Type': 'application/json' }
+      headers
     }
     if (body) {
       options.body = JSON.stringify(body)
@@ -33,6 +37,10 @@ function apiTester() {
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState(null)
   const [error, setError] = useState(null)
+
+  // Auth state
+  const [token, setToken] = useState(null)
+  const [user, setUser] = useState(null)
 
   // Refs for scrolling
   const resultRef = useRef(null)
@@ -76,12 +84,20 @@ function apiTester() {
     setResponse(null)
     setError(null)
 
-    const { data, error } = await callApi(method, endpoint, body)
+    const { data, error } = await callApi(method, endpoint, body, token)
 
     if (error) {
       setError(error)
     } else {
       setResponse(data)
+      
+      // Auto-save token and user info on successful login/register
+      if (endpoint === '/api/auth/login' || endpoint === '/api/auth/register') {
+        if (data?.token) {
+          setToken(data.token)
+          setUser(data.user || null)
+        }
+      }
     }
     setLoading(false)
     
@@ -91,7 +107,19 @@ function apiTester() {
         resultRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }
     }, 100)
-  }, [])
+  }, [token])
+
+  // Logout handler
+  const handleLogout = useCallback(async () => {
+    if (token) {
+      await callApi('POST', '/api/auth/logout', null, token)
+    }
+    setToken(null)
+    setUser(null)
+    setResponse(null)
+    setError(null)
+    setLoginForm({ email: '', password: '' })
+  }, [token])
 
   // ==================== RENDER ====================
   return (
@@ -136,7 +164,11 @@ function apiTester() {
           {activeTab === 'auth' && (
             <AuthSection
               handleRequest={handleRequest}
+              handleLogout={handleLogout}
               loading={loading}
+              token={token}
+              user={user}
+              isLoggedIn={!!token}
               loginForm={loginForm}
               setLoginForm={setLoginForm}
               registerForm={registerForm}
@@ -227,7 +259,8 @@ function apiTester() {
               color="#3498db"
               endpoints={[
                 { method: 'POST', path: '/api/auth/register' },
-                { method: 'POST', path: '/api/auth/login' }
+                { method: 'POST', path: '/api/auth/login' },
+                { method: 'POST', path: '/api/auth/logout' }
               ]}
             />
             <DocColumn
@@ -666,91 +699,118 @@ function HealthSection({ handleRequest, loading }) {
   )
 }
 
-function AuthSection({ handleRequest, loading, loginForm, setLoginForm, registerForm, setRegisterForm }) {
+function AuthSection({ handleRequest, handleLogout, loading, token, user, isLoggedIn, loginForm, setLoginForm, registerForm, setRegisterForm }) {
   return (
     <>
-      <section className="section">
-        <h2 className="section-title"><b>Register New User</b></h2>
-        <p className="section-desc">Create a new user account with username, email, and password.</p>
-        <div className="endpoint-badge"><span className="badge-post">POST</span> /api/auth/register</div>
+      {/* Logged-in Status */}
+      {isLoggedIn ? (
+        <section className="section">
+          <h2 className="section-title"><b>🟢 Logged In</b></h2>
+          {user && (
+            <div className="user-info-box">
+              <p><strong>User:</strong> {user.username}</p>
+              <p><strong>Email:</strong> {user.email}</p>
+              <p><strong>Role:</strong> {user.role}</p>
+            </div>
+          )}
+          <div className="token-preview">
+            <strong>Token:</strong>
+            <code>{token?.substring(0, 30)}...</code>
+          </div>
+          <button
+            onClick={handleLogout}
+            disabled={loading}
+            className="btn-logout"
+          >
+            {loading ? 'Logging out...' : 'Logout'}
+          </button>
+        </section>
+      ) : (
+        <>
+          <section className="section">
+            <h2 className="section-title"><b>Register New User</b></h2>
+            <p className="section-desc">Create a new user account with username, email, and password.</p>
+            <div className="endpoint-badge"><span className="badge-post">POST</span> /api/auth/register</div>
 
-        <div className="form-group">
-          <label className="label">Username</label>
-          <input
-            type="text"
-            placeholder="johndoe"
-            value={registerForm.username}
-            onChange={(e) => setRegisterForm({ ...registerForm, username: e.target.value })}
-            className="input"
-          />
-        </div>
+            <div className="form-group">
+              <label className="label">Username</label>
+              <input
+                type="text"
+                placeholder="johndoe"
+                value={registerForm.username}
+                onChange={(e) => setRegisterForm({ ...registerForm, username: e.target.value })}
+                className="input"
+              />
+            </div>
 
-        <div className="form-group">
-          <label className="label">Email</label>
-          <input
-            type="email"
-            placeholder="john@example.com"
-            value={registerForm.email}
-            onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
-            className="input"
-          />
-        </div>
+            <div className="form-group">
+              <label className="label">Email</label>
+              <input
+                type="email"
+                placeholder="john@example.com"
+                value={registerForm.email}
+                onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                className="input"
+              />
+            </div>
 
-        <div className="form-group">
-          <label className="label">Password (min 8 characters)</label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={registerForm.password}
-            onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
-            className="input"
-          />
-        </div>
+            <div className="form-group">
+              <label className="label">Password (min 8 characters)</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={registerForm.password}
+                onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                className="input"
+              />
+            </div>
 
-        <button
-          onClick={() => handleRequest('POST', '/api/auth/register', registerForm)}
-          disabled={loading}
-          className="btn-primary"
-        >
-          {loading ? 'Registering...' : 'Register User'}
-        </button>
-      </section>
+            <button
+              onClick={() => handleRequest('POST', '/api/auth/register', registerForm)}
+              disabled={loading}
+              className="btn-primary"
+            >
+              {loading ? 'Registering...' : 'Register User'}
+            </button>
+          </section>
 
-      <section className="section">
-        <h2 className="section-title"><b>Login User</b></h2>
-        <p className="section-desc">Authenticate with email and password to receive a JWT token.</p>
-        <div className="endpoint-badge"><span className="badge-post">POST</span> /api/auth/login</div>
+          <section className="section">
+            <h2 className="section-title"><b>Login User</b></h2>
+            <p className="section-desc">Authenticate with email and password to receive a JWT token.</p>
+            <div className="endpoint-badge"><span className="badge-post">POST</span> /api/auth/login</div>
 
-        <div className="form-group">
-          <label className="label">Email</label>
-          <input
-            type="email"
-            placeholder="john@example.com"
-            value={loginForm.email}
-            onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-            className="input"
-          />
-        </div>
+            <div className="form-group">
+              <label className="label">Email</label>
+              <input
+                type="email"
+                placeholder="john@example.com"
+                value={loginForm.email}
+                onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                className="input"
+              />
+            </div>
 
-        <div className="form-group">
-          <label className="label">Password</label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={loginForm.password}
-            onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-            className="input"
-          />
-        </div>
+            <div className="form-group">
+              <label className="label">Password</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={loginForm.password}
+                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                className="input"
+              />
+            </div>
 
-        <button
-          onClick={() => handleRequest('POST', '/api/auth/login', loginForm)}
-          disabled={loading}
-          className="btn-primary"
-        >
-          {loading ? 'Logging in...' : 'Login'}
-        </button>
-      </section>
+            <button
+              onClick={() => handleRequest('POST', '/api/auth/login', loginForm)}
+              disabled={loading}
+              className="btn-primary"
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+          </section>
+        </>
+      )}
     </>
   )
 }

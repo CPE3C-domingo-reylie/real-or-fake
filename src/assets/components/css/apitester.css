@@ -534,6 +534,72 @@ button[role="tab"].active {
   transform: translateY(-1px);
 }
 
+/* User info box */
+.user-info-box {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  border-left: 4px solid #3498db;
+}
+
+.user-info-box p {
+  margin: 6px 0;
+  font-size: 0.95em;
+  color: #333;
+}
+
+/* Token preview */
+.token-preview {
+  background: #2d2d2d;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 15px;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  color: #f8f8f2;
+  font-size: 0.85em;
+  word-break: break-all;
+}
+
+.token-preview strong {
+  color: #3498db;
+  margin-right: 8px;
+}
+
+.token-preview code {
+  color: #38ef7d;
+}
+
+/* Logout button */
+.btn-logout {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: white;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 10px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+  width: 100%;
+}
+
+.btn-logout:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.5);
+}
+
+.btn-logout:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-logout:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
 /* Risk level indicators in response */
 .success-box pre {
   background: rgba(0, 0, 0, 0.8);
