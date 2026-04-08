@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "../assets/components/Layout";
 import "../styles/homePage.css";
 
 export default function HomePage() {
   const [showOptions, setShowOptions] = useState(false);
   const [activeTab, setActiveTab] = useState('link');
+  const [query, setQuery] = useState('');
+  const [urlInput, setUrlInput] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -35,8 +39,13 @@ export default function HomePage() {
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <input placeholder="Search the truth behind the headlines..." />
-            <button className="check-btn">Check</button>
+            <input
+              placeholder="Search the truth behind the headlines..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/results?q=${encodeURIComponent(query)}`); }}
+            />
+            <button className="check-btn" onClick={() => navigate(`/results?q=${encodeURIComponent(query)}`)}>Check</button>
           </div>
 
           {/* DROPDOWN */}
@@ -74,8 +83,11 @@ export default function HomePage() {
                     type="url"
                     placeholder="https://example.com/news"
                     className="check-url-input"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/results?q=${encodeURIComponent(urlInput)}`); }}
                   />
-                  <button className="verify-btn">Verify Link</button>
+                  <button className="verify-btn" onClick={() => navigate(`/results?q=${encodeURIComponent(urlInput)}`)}>Verify Link</button>
                 </div>
               )}
 

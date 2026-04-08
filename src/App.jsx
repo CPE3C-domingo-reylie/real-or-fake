@@ -4,6 +4,7 @@ import { Routes, Route } from "react-router-dom";
 import HomePage from "./pages/home-page";
 import AboutPage from "./pages/about-page";
 import ContactPage from "./pages/contact-page";
+import ResultsPage from "./pages/results-page";
 import HelpCenterPage from "./pages/help-center-page";
 import TermsPage from "./pages/terms-page";
 import PrivacyPage from "./pages/privacy-page";
@@ -14,9 +15,11 @@ import SignUpPage from "./pages/sign-up-page";
 
 function App() {
   return (
-    <>
-
-      <Routes>
+    <>   
+      
+      <Routes>\
+        <Route path="/apitester" element={<ApiTester/>} />
+        <Route path="/results" element={<ResultsPage/>} />
         <Route path="/api-tester" element={<ApiTester />} />
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<AboutPage />} />
