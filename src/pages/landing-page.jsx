@@ -1,10 +1,63 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import UserLayout from "../assets/components/UserLayout";
 import "../styles/landing.css";
+
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3006';
 
 export default function LandingPage() {
   const [showOptions, setShowOptions] = useState(false);
   const [activeTab, setActiveTab] = useState('link');
+  const [query, setQuery] = useState('');
+  const [urlInput, setUrlInput] = useState('');
+  const [recentChecks, setRecentChecks] = useState([]);
+  const navigate = useNavigate();
+
+  // Fetch recent checks on load
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+    fetch(`${API_BASE}/api/checks`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setRecentChecks(data.data);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Save check to database
+  const saveCheck = async (query, verdict = 'mixed', check_type = 'text') => {
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+    try {
+      await fetch(`${API_BASE}/api/checks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ query, verdict, check_type })
+      });
+    } catch (err) {
+      console.error('Failed to save check:', err);
+    }
+  };
+
+  const handleSearch = async () => {
+    const searchTerm = query.trim();
+    if (!searchTerm) return;
+    await saveCheck(searchTerm, 'mixed', 'text');
+    navigate(`/results?q=${encodeURIComponent(searchTerm)}`);
+  };
+
+  const handleLinkCheck = async () => {
+    const searchTerm = urlInput.trim();
+    if (!searchTerm) return;
+    await saveCheck(searchTerm, 'mixed', 'link');
+    navigate(`/results?q=${encodeURIComponent(searchTerm)}`);
+  };
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -13,6 +66,12 @@ export default function LandingPage() {
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, []);
+
+  const getVerdictStyle = (verdict) => {
+    if (verdict === 'verified') return { label: 'Fact', color: '#22c55e' };
+    if (verdict === 'disputed') return { label: 'Fake', color: '#ef4444' };
+    return { label: 'Mixed', color: '#f59e0b' };
+  };
 
   return (
     <UserLayout>
@@ -32,8 +91,13 @@ export default function LandingPage() {
               <circle cx="11" cy="11" r="8"/>
               <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input placeholder="Search the truth behind the headlines..." />
-            <button className="check-btn">Check</button>
+            <input
+              placeholder="Search the truth behind the headlines..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+            />
+            <button className="check-btn" onClick={handleSearch}>Check</button>
           </div>
 
           {showOptions && (
@@ -65,8 +129,15 @@ export default function LandingPage() {
               {activeTab === 'link' && (
                 <div className="check-tab-content">
                   <label>News Article URL</label>
-                  <input type="url" placeholder="https://example.com/news" className="check-url-input"/>
-                  <button className="verify-btn">Verify Link</button>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/news"
+                    className="check-url-input"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleLinkCheck(); }}
+                  />
+                  <button className="verify-btn" onClick={handleLinkCheck}>Check Link</button>
                 </div>
               )}
 
@@ -89,17 +160,44 @@ export default function LandingPage() {
           )}
         </div>
 
-        {/* PLACEHOLDER for Your Activity + Recent Checks */}
-        <div className="landing-placeholder">
-          <div className="placeholder-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
+        {/* RECENT CHECKS */}
+        {recentChecks.length === 0 ? (
+          <div className="landing-placeholder">
+            <div className="placeholder-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </div>
+            <h3>No checks yet</h3>
+            <p>Your activity and recent checks will appear here once you start verifying claims.</p>
           </div>
-          <h3>No checks yet</h3>
-          <p>Your activity and recent checks will appear here once you start verifying claims.</p>
-        </div>
+        ) : (
+          <div className="recent-checks">
+            <h3 className="recent-title">Recent Checks</h3>
+            <div className="checks-list">
+              {recentChecks.map((check) => {
+                const { label, color } = getVerdictStyle(check.verdict);
+                return (
+                  <div
+                    key={check.id}
+                    className="check-item"
+                    onClick={() => navigate(`/results?q=${encodeURIComponent(check.query)}`)}
+                  >
+                    <div className="check-query">{check.query}</div>
+                    <div className="check-meta">
+                      <span className="check-type">{check.check_type}</span>
+                      <span className="check-verdict" style={{ color }}>{label}</span>
+                      <span className="check-date">
+                        {new Date(check.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
       </main>
     </UserLayout>
