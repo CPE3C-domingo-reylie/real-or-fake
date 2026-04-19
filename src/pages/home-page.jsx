@@ -1,14 +1,25 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "../assets/components/Layout";
 import "../styles/homePage.css";
 
 export default function HomePage() {
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [activeTab, setActiveTab] = useState('link');
   const [query, setQuery] = useState('');
   const [urlInput, setUrlInput] = useState('');
   const navigate = useNavigate();
+
+  const isLoggedIn = () => !!localStorage.getItem("authToken");
+
+  const handleSearch = () => {
+    if (!isLoggedIn()) {
+      setShowLoginPopup(true);
+      return;
+    }
+    navigate('/landing');
+  };
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -43,9 +54,11 @@ export default function HomePage() {
               placeholder="Search the truth behind the headlines..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/results?q=${encodeURIComponent(query)}`); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
             />
-            <button className="check-btn" onClick={() => navigate(`/results?q=${encodeURIComponent(query)}`)}>Check</button>
+            <button className="check-btn" onClick={handleSearch}>
+              Check
+            </button>
           </div>
 
           {/* DROPDOWN */}
@@ -168,6 +181,21 @@ export default function HomePage() {
         </div>
 
       </main>
+
+      {showLoginPopup && (
+        <div className="login-popup-overlay" onClick={() => setShowLoginPopup(false)}>
+          <div className="login-popup" onClick={(e) => e.stopPropagation()}>
+            <h3>Login Required</h3>
+            <p>You need to be logged in to search.</p>
+            <Link to="/login">
+              <button className="auth-button">Login</button>
+            </Link>
+            <p className="auth-switch">
+              Don't have an account? <Link to="/signup">Sign up</Link>
+            </p>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

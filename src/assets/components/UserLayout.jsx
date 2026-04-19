@@ -2,17 +2,25 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../styles/user-layout.css";
 
-const mockUser = {
-  name: "Denver Lyndon San Diego",
-  email: "denverlyndonsandiego@gmail.com",
-};
-
 export default function UserLayout({ children }) {
   const canvasRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const accountRef = useRef(null);
+
+  const navigate = useNavigate();
+  const storedUser = JSON.parse(localStorage.getItem("authUser") || "{}");
+  const mockUser = {
+    name: storedUser.username || storedUser.name || "User",
+    email: storedUser.email || "",
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("authUser");
+    navigate("/");
+  };
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -175,7 +183,7 @@ export default function UserLayout({ children }) {
                   </svg>
                   Settings
                 </Link>
-                <button className="account-menu-item logout">
+                <button className="account-menu-item logout" onClick={handleLogout}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
                     <polyline points="16 17 21 12 16 7" />
