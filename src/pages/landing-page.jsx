@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import UserLayout from "../assets/components/UserLayout";
 import "../styles/landing.css";
@@ -11,6 +11,10 @@ export default function LandingPage() {
   const [query, setQuery] = useState('');
   const [urlInput, setUrlInput] = useState('');
   const [recentChecks, setRecentChecks] = useState([]);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
   // Fetch recent checks on load
@@ -21,9 +25,7 @@ export default function LandingPage() {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
-      .then(data => {
-        if (data.success) setRecentChecks(data.data);
-      })
+      .then(data => { if (data.success) setRecentChecks(data.data); })
       .catch(() => {});
   }, []);
 
@@ -57,6 +59,30 @@ export default function LandingPage() {
     if (!searchTerm) return;
     await saveCheck(searchTerm, 'mixed', 'link');
     navigate(`/results?q=${encodeURIComponent(searchTerm)}`);
+  };
+
+  const handleImageSelect = (file) => {
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageCheck = async () => {
+    if (!imageFile) return;
+    const searchTerm = imageFile.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+    await saveCheck(searchTerm, 'mixed', 'image');
+    navigate(`/results?q=${encodeURIComponent(searchTerm)}`);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      handleImageSelect(file);
+    }
   };
 
   useEffect(() => {
@@ -126,6 +152,7 @@ export default function LandingPage() {
                 </button>
               </div>
 
+              {/* LINK TAB */}
               {activeTab === 'link' && (
                 <div className="check-tab-content">
                   <label>News Article URL</label>
@@ -141,19 +168,55 @@ export default function LandingPage() {
                 </div>
               )}
 
+              {/* IMAGE TAB */}
               {activeTab === 'image' && (
                 <div className="check-tab-content">
-                  <div className="upload-area">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="16 16 12 12 8 16"/>
-                      <line x1="12" y1="12" x2="12" y2="21"/>
-                      <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/>
-                    </svg>
-                    <p>Drag & drop an image</p>
-                    <span>or</span>
-                    <button className="browse-btn">Browse Files</button>
-                    <small>JPG, PNG, GIF, WebP</small>
-                  </div>
+                  {!imagePreview ? (
+                    <div
+                      className={`upload-area ${dragOver ? 'drag-over' : ''}`}
+                      onDrop={handleDrop}
+                      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                      onDragLeave={() => setDragOver(false)}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="16 16 12 12 8 16"/>
+                        <line x1="12" y1="12" x2="12" y2="21"/>
+                        <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/>
+                      </svg>
+                      <p>Drag & drop an image</p>
+                      <span>or</span>
+                      <button
+                        className="browse-btn"
+                        onClick={() => fileInputRef.current.click()}
+                      >
+                        Browse Files
+                      </button>
+                      <small>JPG, PNG, GIF, WebP</small>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleImageSelect(e.target.files[0])}
+                      />
+                    </div>
+                  ) : (
+                    <div className="image-preview-area">
+                      <img src={imagePreview} alt="Preview" className="image-preview" />
+                      <p className="image-filename">{imageFile.name}</p>
+                      <div className="image-actions">
+                        <button
+                          className="browse-btn"
+                          onClick={() => { setImageFile(null); setImagePreview(null); }}
+                        >
+                          Remove
+                        </button>
+                        <button className="verify-btn" onClick={handleImageCheck}>
+                          Check Image
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
