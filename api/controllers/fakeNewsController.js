@@ -2,6 +2,7 @@
 
 import {
     calculateFakeNewsProbability,
+    calculateFakeNewsProbabilityWithFactCheck,
     compareArticlesForVerification
 } from '../services/fakeNewsScoringService.js';
 
@@ -14,7 +15,8 @@ export async function analyzeFakeNewsScore(req, res) {
             return res.status(400).json({ error: 'article title is required' });
         }
 
-        const result = calculateFakeNewsProbability(article);
+        // Use fact-check API if available, otherwise fallback to heuristic scoring
+        const result = await calculateFakeNewsProbabilityWithFactCheck(article);
 
         res.json({
             success: true,
@@ -58,11 +60,12 @@ export async function batchAnalyze(req, res) {
             return res.status(400).json({ error: 'articles array is required' });
         }
 
-        const results = articles.map(article => ({
+        // Analyze all articles with fact-check (parallel execution)
+        const results = await Promise.all(articles.map(async (article) => ({
             title: article.title,
             source: article.source,
-            ...calculateFakeNewsProbability(article)
-        }));
+            ...(await calculateFakeNewsProbabilityWithFactCheck(article))
+        })));
 
         res.json({
             success: true,

@@ -1,5 +1,7 @@
 /* SERVICES/FAKENEWSSCORINGSERVICE.JS - FAKE NEWS PROBABILITY SCORING */
 
+import { factCheckClaim, extractClaimPhrases } from './googleFactCheckService.js';
+
 /**
  * Fake News Probability Scoring System
  *
@@ -11,6 +13,7 @@
  * 5. Article completeness (author, date, sources cited)
  * 6. URL/domain analysis
  * 7. Cross-source verification (if same fact reported elsewhere)
+ * 8. Google Fact Check API verification (NEW)
  *
  * Final score: 0-100 (0 = most credible, 100 = likely fake)
  */
@@ -248,7 +251,48 @@ function calculateCrossSourceBonus(articles, currentArticleIndex) {
 }
 
 /**
- * Main scoring function
+ * Calculate fact-check penalty using Google Fact Check API
+ * Returns penalty (0-30 points) based on fact-check ratings
+ */
+async function calculateFactCheckPenalty(article) {
+    const text = `${article.title} ${article.description || ''} ${article.bodyText || ''}`.trim();
+
+    if (!text || text.length < 10) {
+        return { penalty: 0, factChecks: [], error: 'NO_CLAIM' };
+    }
+
+    // Extract claim phrases from text
+    const phrases = extractClaimPhrases(text);
+
+    if (phrases.length === 0) {
+        return { penalty: 0, factChecks: [], error: 'NO_EXTRACTABLE_CLAIMS' };
+    }
+
+    // Check each extracted claim against fact-check databases
+    let maxPenalty = 0;
+    const allFactChecks = [];
+
+    for (const phrase of phrases) {
+        const result = await factCheckClaim(phrase);
+
+        if (result.error === null && result.factChecks.length > 0) {
+            maxPenalty = Math.max(maxPenalty, result.penalty);
+            allFactChecks.push(...result.factChecks);
+        }
+    }
+
+    // Normalize penalty to 0-30 range (fact-check is heavily weighted)
+    const normalizedPenalty = Math.round((maxPenalty / 100) * 30);
+
+    return {
+        penalty: normalizedPenalty,
+        factChecks: allFactChecks.slice(0, 5), // Limit to 5 fact checks
+        rawPenalty: maxPenalty
+    };
+}
+
+/**
+ * Main scoring function (synchronous - no fact-check API)
  * @param {object} article - Article object to analyze
  * @returns {object} Scoring breakdown and final probability
  */
@@ -306,10 +350,83 @@ export function calculateFakeNewsProbability(article) {
             clickbaitPatterns: clickbaitScore,
             conspiracyLanguage: conspiracyScore,
             uncertaintyLanguage: uncertaintyScore,
-            sourceCredibility: Math.round(sourcePenalty * 100 / 15), // Normalize to percentage
-            articleCompleteness: Math.round(completenessPenalty * 10) // Normalize to 0-100
+            sourceCredibility: Math.round(sourcePenalty * 100 / 15),
+            articleCompleteness: Math.round(completenessPenalty * 10)
         },
         flags: getDetectedFlags(text, article.title)
+    };
+}
+
+/**
+ * Main scoring function WITH fact-check API (async)
+ * @param {object} article - Article object to analyze
+ * @returns {Promise<object>} Scoring breakdown with fact-check results
+ */
+export async function calculateFakeNewsProbabilityWithFactCheck(article) {
+    const text = `${article.title} ${article.description} ${article.bodyText}`;
+
+    // Calculate individual scores
+    const sensationalismScore = calculateSensationalismScore(text);
+    const emotionalScore = calculateEmotionalScore(text);
+    const clickbaitScore = calculateClickbaitScore(article.title);
+    const conspiracyScore = calculateConspiracyScore(text);
+    const uncertaintyScore = calculateUncertaintyScore(text);
+    const sourcePenalty = calculateSourceCredibilityPenalty(
+        article.link || article.url,
+        article.credibility
+    );
+    const completenessPenalty = calculateCompletenessScore(article);
+    const crossSourceBonus = calculateCrossSourceBonus([article], 0);
+
+    // Get fact-check penalty
+    const factCheckResult = await calculateFactCheckPenalty(article);
+
+    // Total score (0-100) - fact check penalty heavily weighted
+    const totalScore = Math.min(100,
+        sensationalismScore +
+        emotionalScore +
+        clickbaitScore +
+        conspiracyScore +
+        uncertaintyScore +
+        sourcePenalty +
+        completenessPenalty +
+        factCheckResult.penalty -
+        crossSourceBonus
+    );
+
+    // Determine risk level
+    let riskLevel, riskDescription;
+    if (totalScore <= 20) {
+        riskLevel = 'LOW';
+        riskDescription = 'Article appears credible';
+    } else if (totalScore <= 40) {
+        riskLevel = 'MODERATE';
+        riskDescription = 'Some concerning patterns detected';
+    } else if (totalScore <= 60) {
+        riskLevel = 'HIGH';
+        riskDescription = 'Multiple red flags detected';
+    } else {
+        riskLevel = 'VERY_HIGH';
+        riskDescription = 'High probability of misinformation';
+    }
+
+    return {
+        fakeProbability: totalScore,
+        riskLevel,
+        riskDescription,
+        breakdown: {
+            sensationalism: sensationalismScore,
+            emotionalLanguage: emotionalScore,
+            clickbaitPatterns: clickbaitScore,
+            conspiracyLanguage: conspiracyScore,
+            uncertaintyLanguage: uncertaintyScore,
+            sourceCredibility: Math.round(sourcePenalty * 100 / 15),
+            articleCompleteness: Math.round(completenessPenalty * 10),
+            factCheckPenalty: factCheckResult.penalty
+        },
+        flags: getDetectedFlags(text, article.title),
+        factChecks: factCheckResult.factChecks,
+        factCheckError: factCheckResult.error
     };
 }
 

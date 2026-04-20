@@ -16,3 +16,14 @@ CREATE TABLE
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         is_logged_in TINYINT (1) DEFAULT 0
     );
+
+CREATE TABLE
+    IF NOT EXISTS checks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        query TEXT NOT NULL,
+        verdict VARCHAR(50) DEFAULT 'mixed',
+        check_type VARCHAR(50) DEFAULT 'text',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE
+    );

@@ -6,6 +6,28 @@ import './css/apitester.css'
 
 const API_BASE = 'http://localhost:3006'
 
+// ==================== HELPER FUNCTIONS FOR FAKE NEWS DISPLAY ====================
+const getScoreColor = (score) => {
+  if (score <= 20) return '#27ae60';
+  if (score <= 40) return '#27ae60';
+  if (score <= 60) return '#f39c12';
+  return '#e74c3c';
+};
+
+const formatBreakdownLabel = (key) => {
+  const labels = {
+    sensationalism: 'Sensationalism',
+    emotionalLanguage: 'Emotional Language',
+    clickbaitPatterns: 'Clickbait Patterns',
+    conspiracyLanguage: 'Conspiracy Language',
+    uncertaintyLanguage: 'Uncertainty Language',
+    sourceCredibility: 'Source Credibility',
+    articleCompleteness: 'Article Completeness',
+    factCheckPenalty: 'Fact-Check Penalty'
+  };
+  return labels[key] || key;
+};
+
 // ==================== REUSABLE API CALL FUNCTION ====================
 const callApi = async (method, endpoint, body = null, token = null) => {
   try {
@@ -61,7 +83,7 @@ function apiTester() {
   const [rssSourcesSelected, setRssSourcesSelected] = useState('')
   const [rssArticleId, setRssArticleId] = useState('')
 
-  // Fake News Analysis forms
+  // Fake News Analysis form
   const [fakeNewsForm, setFakeNewsForm] = useState({
     title: '',
     description: '',
@@ -70,8 +92,6 @@ function apiTester() {
     source: '',
     byline: ''
   })
-  const [compareArticles, setCompareArticles] = useState('')
-  const [batchArticles, setBatchArticles] = useState('')
 
   // Auto-run health check on mount
   useEffect(() => {
@@ -213,10 +233,6 @@ function apiTester() {
               loading={loading}
               fakeNewsForm={fakeNewsForm}
               setFakeNewsForm={setFakeNewsForm}
-              compareArticles={compareArticles}
-              setCompareArticles={setCompareArticles}
-              batchArticles={batchArticles}
-              setBatchArticles={setBatchArticles}
             />
           )}
         </main>
@@ -239,7 +255,87 @@ function apiTester() {
             {response && (
               <div className="success-box">
                 <strong>✓ Response</strong>
-                <pre>{JSON.stringify(response, null, 2)}</pre>
+                {/* Special rendering for fake news analysis */}
+                {response.data?.fakeProbability !== undefined ? (
+                  <div className="fake-news-result">
+                    <div className="score-display">
+                      <div className="score-circle" style={{
+                        borderColor: getScoreColor(response.data.fakeProbability)
+                      }}>
+                        <span className="score-value" style={{ color: getScoreColor(response.data.fakeProbability) }}>
+                          {response.data.fakeProbability}
+                        </span>
+                        <span className="score-label">Fake Score</span>
+                      </div>
+                      <div className="risk-badge" style={{
+                        backgroundColor: getScoreColor(response.data.fakeProbability)
+                      }}>
+                        {response.data.riskLevel}
+                      </div>
+                    </div>
+                    <p className="risk-description">{response.data.riskDescription}</p>
+
+                    {/* Fact Check Results */}
+                    {response.data.factChecks && response.data.factChecks.length > 0 && (
+                      <div className="fact-check-section">
+                        <h4>🔍 Fact-Check Results</h4>
+                        {response.data.factChecks.map((fc, idx) => (
+                          <div key={idx} className="fact-check-item">
+                            <div className="fact-check-header">
+                              <strong>Claim:</strong> "{fc.claimText}"
+                            </div>
+                            <div className="fact-check-details">
+                              <span className="publisher">{fc.publisher}</span>
+                              <span className={`verdict ${fc.verdict.toLowerCase()}`}>
+                                {fc.verdict}
+                              </span>
+                              {fc.url && (
+                                <a href={fc.url} target="_blank" rel="noopener noreferrer" className="fact-check-link">
+                                  Read full fact-check
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Breakdown */}
+                    {response.data.breakdown && (
+                      <div className="breakdown-section">
+                        <h4>Score Breakdown</h4>
+                        <div className="breakdown-grid">
+                          {Object.entries(response.data.breakdown).map(([key, value]) => (
+                            <div key={key} className="breakdown-item">
+                              <span className="breakdown-label">{formatBreakdownLabel(key)}</span>
+                              <div className="breakdown-bar">
+                                <div className="bar-fill" style={{
+                                  width: `${Math.min(100, value)}%`,
+                                  backgroundColor: value > 50 ? '#e74c3c' : value > 25 ? '#f39c12' : '#27ae60'
+                                }}></div>
+                                <span className="bar-value">{value}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Flags */}
+                    {response.data.flags && response.data.flags.length > 0 && (
+                      <div className="flags-section">
+                        <h4>⚠️ Detected Flags</h4>
+                        <ul className="flags-list">
+                          {response.data.flags.map((flag, idx) => (
+                            <li key={idx}>{flag}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <pre>{JSON.stringify(response, null, 2)}</pre>
+                )}
               </div>
             )}
           </div>
@@ -452,198 +548,53 @@ function RssSection({ handleRequest, loading, rssSearchForm, setRssSearchForm, r
 }
 
 // ==================== FAKE NEWS ANALYSIS SECTION ====================
-function FakeNewsSection({ handleRequest, loading, fakeNewsForm, setFakeNewsForm, compareArticles, setCompareArticles, batchArticles, setBatchArticles }) {
+function FakeNewsSection({ handleRequest, loading, fakeNewsForm, setFakeNewsForm }) {
   return (
     <>
       <section className="section">
-        <h2 className="section-title"><b>🔍 Analyze Single Article (Fake News Score)</b></h2>
-        <p className="section-desc">Analyze a single article for fake news probability based on multiple factors.</p>
+        <h2 className="section-title"><b>🔍 Fake News Checker</b></h2>
+        <p className="section-desc">Enter a claim, statement, or news to check if it's real or fake.</p>
         <div className="endpoint-badge"><span className="badge-post">POST</span> /api/news/analyze/fake-score</div>
 
         <div className="form-group">
-          <label className="label">Title *</label>
-          <input
-            type="text"
-            placeholder="Article title"
+          <label className="label">Enter Claim or Information *</label>
+          <textarea
+            placeholder="e.g., President Donald J. Trump is dead"
             value={fakeNewsForm.title}
             onChange={(e) => setFakeNewsForm({ ...fakeNewsForm, title: e.target.value })}
-            className="input"
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="label">Description / Summary</label>
-          <textarea
-            placeholder="Article description or summary"
-            value={fakeNewsForm.description}
-            onChange={(e) => setFakeNewsForm({ ...fakeNewsForm, description: e.target.value })}
-            rows={3}
+            rows={4}
             className="textarea"
           />
-        </div>
-
-        <div className="form-group">
-          <label className="label">Body Text</label>
-          <textarea
-            placeholder="Full article text (optional but improves accuracy)"
-            value={fakeNewsForm.bodyText}
-            onChange={(e) => setFakeNewsForm({ ...fakeNewsForm, bodyText: e.target.value })}
-            rows={5}
-            className="textarea"
-          />
-        </div>
-
-        <div className="form-grid">
-          <div className="form-group">
-            <label className="label">Article URL / Link</label>
-            <input
-              type="text"
-              placeholder="https://example.com/article"
-              value={fakeNewsForm.link}
-              onChange={(e) => setFakeNewsForm({ ...fakeNewsForm, link: e.target.value })}
-              className="input"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="label">Source / Author</label>
-            <input
-              type="text"
-              placeholder="Source name or byline"
-              value={fakeNewsForm.source}
-              onChange={(e) => setFakeNewsForm({ ...fakeNewsForm, source: e.target.value })}
-              className="input"
-            />
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label className="label">Byline (Author)</label>
-          <input
-            type="text"
-            placeholder="Author name"
-            value={fakeNewsForm.byline}
-            onChange={(e) => setFakeNewsForm({ ...fakeNewsForm, byline: e.target.value })}
-            className="input"
-          />
+          <small className="help-text">
+            The system will check this against fact-checking databases and analyze for fake news patterns.
+          </small>
         </div>
 
         <button
           onClick={() => handleRequest('POST', '/api/news/analyze/fake-score', {
             title: fakeNewsForm.title,
-            description: fakeNewsForm.description,
-            bodyText: fakeNewsForm.bodyText,
-            link: fakeNewsForm.link,
-            source: fakeNewsForm.source,
-            byline: fakeNewsForm.byline
+            description: '',
+            bodyText: '',
+            link: '',
+            source: '',
+            byline: ''
           })}
-          disabled={loading || !fakeNewsForm.title}
+          disabled={loading || !fakeNewsForm.title.trim()}
           className="btn-primary"
         >
-          {loading ? 'Analyzing...' : 'Calculate Fake News Score'}
+          {loading ? 'Checking with Fact-Check APIs...' : 'Check if Real or Fake'}
         </button>
       </section>
 
-      <section className="section">
-        <h2 className="section-title"><b>🔄 Compare Multiple Articles</b></h2>
-        <p className="section-desc">Compare multiple articles to verify facts and find consensus.</p>
-        <div className="endpoint-badge"><span className="badge-post">POST</span> /api/news/analyze/compare</div>
-
-        <div className="form-group">
-          <label className="label">Articles (JSON format)</label>
-          <textarea
-            placeholder='[
-  {"title": "Breaking News: Important Event", "source": "BBC", "description": "..."},
-  {"title": "Breaking News: Important Event", "source": "Reuters", "description": "..."}
-]'
-            value={compareArticles}
-            onChange={(e) => setCompareArticles(e.target.value)}
-            rows={8}
-            className="textarea"
-          />
-          <small className="help-text">
-            Enter articles as JSON array. Each article should have at least a title.
-          </small>
-        </div>
-
-        <button
-          onClick={() => {
-            try {
-              const articles = JSON.parse(compareArticles)
-              handleRequest('POST', '/api/news/analyze/compare', { articles })
-            } catch (e) {
-              alert('Invalid JSON format. Please check your input.')
-            }
-          }}
-          disabled={loading || !compareArticles}
-          className="btn-primary"
-        >
-          {loading ? 'Comparing...' : 'Compare Articles'}
-        </button>
-      </section>
-
-      <section className="section">
-        <h2 className="section-title"><b>📊 Batch Analyze Articles</b></h2>
-        <p className="section-desc">Analyze multiple articles individually and get scores for each.</p>
-        <div className="endpoint-badge"><span className="badge-post">POST</span> /api/news/analyze/batch</div>
-
-        <div className="form-group">
-          <label className="label">Articles (JSON format)</label>
-          <textarea
-            placeholder='[
-  {"title": "Amazing discovery that will shock you!", "source": "Suspicious Site"},
-  {"title": "Scientists find new treatment for disease", "source": "Science Daily"},
-  {"title": "Government hides shocking truth", "source": "Conspiracy News"}
-]'
-            value={batchArticles}
-            onChange={(e) => setBatchArticles(e.target.value)}
-            rows={8}
-            className="textarea"
-          />
-          <small className="help-text">
-            Enter articles as JSON array. Each article will receive an individual fake news score.
-          </small>
-        </div>
-
-        <button
-          onClick={() => {
-            try {
-              const articles = JSON.parse(batchArticles)
-              handleRequest('POST', '/api/news/analyze/batch', { articles })
-            } catch (e) {
-              alert('Invalid JSON format. Please check your input.')
-            }
-          }}
-          disabled={loading || !batchArticles}
-          className="btn-primary"
-        >
-          {loading ? 'Analyzing...' : 'Batch Analyze'}
-        </button>
-      </section>
-
-      {/* Example Articles Section */}
+      {/* Quick Examples */}
       <section className="section example-section">
-        <h2 className="section-title"><b>📝 Example Articles to Try</b></h2>
+        <h2 className="section-title"><b>📝 Try These Examples</b></h2>
         <div className="example-grid">
           <div className="example-card">
-            <h4>Suspicious Article Example</h4>
-            <pre>{`{
-  "title": "SHOCKING: Government Hides Miracle Cure for Cancer!",
-  "description": "Doctors hate this one weird trick that cures all diseases",
-  "source": "NaturalHealthDaily.com",
-  "byline": ""
-}`}</pre>
+            <h4>Claim to Check</h4>
+            <pre>"President Donald J. Trump is dead"</pre>
             <button
-              onClick={() => {
-                setFakeNewsForm({
-                  title: "SHOCKING: Government Hides Miracle Cure for Cancer!",
-                  description: "Doctors hate this one weird trick that cures all diseases",
-                  bodyText: "",
-                  link: "https://naturalhealthdaily.com/miracle-cure",
-                  source: "NaturalHealthDaily.com",
-                  byline: ""
-                })
-              }}
+              onClick={() => setFakeNewsForm({ ...fakeNewsForm, title: 'President Donald J. Trump is dead' })}
               className="btn-example"
             >
               Load Example
@@ -651,24 +602,10 @@ function FakeNewsSection({ handleRequest, loading, fakeNewsForm, setFakeNewsForm
           </div>
 
           <div className="example-card">
-            <h4>Credible Article Example</h4>
-            <pre>{`{
-  "title": "Scientists discover promising new treatment for cancer",
-  "description": "Researchers at Stanford University have found a new compound...",
-  "source": "Reuters",
-  "byline": "Dr. Sarah Johnson"
-}`}</pre>
+            <h4>Another Claim</h4>
+            <pre>"Vaccines contain microchips for tracking"</pre>
             <button
-              onClick={() => {
-                setFakeNewsForm({
-                  title: "Scientists discover promising new treatment for cancer",
-                  description: "Researchers at Stanford University have found a new compound that shows promise in early-stage clinical trials for treating pancreatic cancer.",
-                  bodyText: "The study, published in Nature Medicine, involved 150 patients...",
-                  link: "https://reuters.com/science/cancer-treatment",
-                  source: "Reuters",
-                  byline: "Dr. Sarah Johnson"
-                })
-              }}
+              onClick={() => setFakeNewsForm({ ...fakeNewsForm, title: 'Vaccines contain microchips for tracking' })}
               className="btn-example"
             >
               Load Example
