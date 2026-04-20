@@ -27,6 +27,9 @@ export default {
     NEWS_API_KEY: process.env.NEWS_API_KEY,
     GUARDIAN_API_KEY: process.env.GUARDIAN_API_KEY,
 
+    //Google Fact Check API
+    GOOGLE_FACT_CHECK_API_KEY: process.env.GOOGLE_FACT_CHECK_API_KEY,
+
     //JWT
     JWT_SECRET: process.env.JWT_SECRET,
     JWT_EXPIRES_IN: '24h',
