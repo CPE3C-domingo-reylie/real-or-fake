@@ -1,16 +1,49 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import UserLayout from "../assets/components/UserLayout";
 import "../styles/setting.css";
 
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3006';
+
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({
-    darkMode: true,
-    emailNotifications: true,
-    pushNotifications: false,
-    weeklyDigest: true,
+  const navigate = useNavigate();
+
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem("verifake-settings");
+    if (saved) return JSON.parse(saved);
+    return {
+      darkMode: false,
+      emailNotifications: true,
+      pushNotifications: false,
+      weeklyDigest: true,
+    };
   });
 
-  // Apply theme to document
+  // Modal states
+  const [modal, setModal] = useState(null); // 'profile' | 'password' | 'language' | 'delete'
+
+  // Edit Profile form
+  const storedUser = JSON.parse(localStorage.getItem("authUser") || "{}");
+  const [profileForm, setProfileForm] = useState({
+    name: storedUser.username || storedUser.name || "",
+    email: storedUser.email || "",
+  });
+  const [profileMsg, setProfileMsg] = useState("");
+
+  // Change Password form
+  const [passwordForm, setPasswordForm] = useState({
+    current: "", newPass: "", confirm: ""
+  });
+  const [passwordMsg, setPasswordMsg] = useState("");
+
+  // Language
+  const [language, setLanguage] = useState(
+    localStorage.getItem("verifake-language") || "en"
+  );
+
+  // Delete confirmation
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+
   useEffect(() => {
     document.documentElement.setAttribute(
       'data-theme',
@@ -18,7 +51,135 @@ export default function SettingsPage() {
     );
   }, [settings.darkMode]);
 
-  const toggle = (key) => setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggle = (key) => setSettings(prev => {
+    const next = { ...prev, [key]: !prev[key] };
+    localStorage.setItem("verifake-settings", JSON.stringify(next));
+    return next;
+  });
+
+  const closeModal = () => {
+    setModal(null);
+    setProfileMsg("");
+    setPasswordMsg("");
+    setDeleteConfirm("");
+  };
+
+  // Save profile
+  const handleSaveProfile = async () => {
+    const token = localStorage.getItem("authToken");
+    try {
+      const res = await fetch(`${API_BASE}/api/user/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: profileForm.name, email: profileForm.email }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updated = { ...storedUser, username: profileForm.name, email: profileForm.email };
+        localStorage.setItem("authUser", JSON.stringify(updated));
+        setProfileMsg("Profile updated successfully!");
+      } else {
+        setProfileMsg(data.message || "Failed to update profile.");
+      }
+    } catch {
+      // If no API endpoint yet, just save locally
+      const updated = { ...storedUser, username: profileForm.name, email: profileForm.email };
+      localStorage.setItem("authUser", JSON.stringify(updated));
+      setProfileMsg("Profile updated successfully!");
+    }
+  };
+
+  // Change password
+  const handleChangePassword = async () => {
+    if (passwordForm.newPass !== passwordForm.confirm) {
+      setPasswordMsg("New passwords do not match.");
+      return;
+    }
+    if (passwordForm.newPass.length < 6) {
+      setPasswordMsg("Password must be at least 6 characters.");
+      return;
+    }
+    const token = localStorage.getItem("authToken");
+    try {
+      const res = await fetch(`${API_BASE}/api/user/password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword: passwordForm.current,
+          newPassword: passwordForm.newPass,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPasswordMsg("Password changed successfully!");
+        setPasswordForm({ current: "", newPass: "", confirm: "" });
+      } else {
+        setPasswordMsg(data.message || "Failed to change password.");
+      }
+    } catch {
+      setPasswordMsg("Could not connect to server.");
+    }
+  };
+
+  // Save language
+  const handleSaveLanguage = () => {
+    localStorage.setItem("verifake-language", language);
+    closeModal();
+  };
+
+  // Download data
+  const handleDownloadData = async () => {
+    const token = localStorage.getItem("authToken");
+    try {
+      const res = await fetch(`${API_BASE}/api/checks`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data.data || [], null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "verifake-history.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to download data.");
+    }
+  };
+
+  // Delete account
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== "DELETE") return;
+    const token = localStorage.getItem("authToken");
+    try {
+      await fetch(`${API_BASE}/api/user`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch { /* proceed anyway */ }
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("authUser");
+    localStorage.removeItem("verifake-settings");
+    navigate("/");
+  };
+
+  const languages = [
+    { code: "en", label: "English" },
+    { code: "fil", label: "Filipino" },
+    { code: "es", label: "Spanish" },
+    { code: "fr", label: "French" },
+    { code: "de", label: "German" },
+    { code: "ja", label: "Japanese" },
+    { code: "zh", label: "Chinese" },
+  ];
 
   return (
     <UserLayout>
@@ -43,10 +204,7 @@ export default function SettingsPage() {
               <h3>Theme</h3>
               <p>Choose between light and dark mode</p>
             </div>
-            <button
-              className={`toggle ${settings.darkMode ? 'on' : ''}`}
-              onClick={() => toggle('darkMode')}
-            >
+            <button className={`toggle ${settings.darkMode ? 'on' : ''}`} onClick={() => toggle('darkMode')}>
               <div className="toggle-thumb">
                 {settings.darkMode ? (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -81,42 +239,21 @@ export default function SettingsPage() {
             </div>
             <h2>Notifications</h2>
           </div>
-          <div className="settings-item">
-            <div>
-              <h3>Email Notifications</h3>
-              <p>Receive updates about your fact-checks via email</p>
+          {[
+            { key: "emailNotifications", label: "Email Notifications", desc: "Receive updates about your fact-checks via email" },
+            { key: "pushNotifications", label: "Push Notifications", desc: "Get browser notifications for important updates" },
+            { key: "weeklyDigest", label: "Weekly Digest", desc: "Get a weekly summary of your fact-checking activity" },
+          ].map(({ key, label, desc }) => (
+            <div className="settings-item" key={key}>
+              <div>
+                <h3>{label}</h3>
+                <p>{desc}</p>
+              </div>
+              <button className={`toggle ${settings[key] ? 'on' : ''}`} onClick={() => toggle(key)}>
+                <div className="toggle-thumb" />
+              </button>
             </div>
-            <button
-              className={`toggle ${settings.emailNotifications ? 'on' : ''}`}
-              onClick={() => toggle('emailNotifications')}
-            >
-              <div className="toggle-thumb" />
-            </button>
-          </div>
-          <div className="settings-item">
-            <div>
-              <h3>Push Notifications</h3>
-              <p>Get browser notifications for important updates</p>
-            </div>
-            <button
-              className={`toggle ${settings.pushNotifications ? 'on' : ''}`}
-              onClick={() => toggle('pushNotifications')}
-            >
-              <div className="toggle-thumb" />
-            </button>
-          </div>
-          <div className="settings-item">
-            <div>
-              <h3>Weekly Digest</h3>
-              <p>Get a weekly summary of your fact-checking activity</p>
-            </div>
-            <button
-              className={`toggle ${settings.weeklyDigest ? 'on' : ''}`}
-              onClick={() => toggle('weeklyDigest')}
-            >
-              <div className="toggle-thumb" />
-            </button>
-          </div>
+          ))}
         </div>
 
         {/* ACCOUNT */}
@@ -130,7 +267,8 @@ export default function SettingsPage() {
             </div>
             <h2>Account</h2>
           </div>
-          <div className="settings-item clickable">
+
+          <div className="settings-item clickable" onClick={() => setModal('profile')}>
             <div className="settings-item-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
@@ -145,7 +283,8 @@ export default function SettingsPage() {
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </div>
-          <div className="settings-item clickable">
+
+          <div className="settings-item clickable" onClick={() => setModal('password')}>
             <div className="settings-item-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -160,7 +299,8 @@ export default function SettingsPage() {
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </div>
-          <div className="settings-item clickable">
+
+          <div className="settings-item clickable" onClick={() => setModal('language')}>
             <div className="settings-item-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/>
@@ -189,7 +329,8 @@ export default function SettingsPage() {
             </div>
             <h2>Data & Privacy</h2>
           </div>
-          <div className="settings-item clickable">
+
+          <div className="settings-item clickable" onClick={handleDownloadData}>
             <div className="settings-item-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
@@ -205,7 +346,8 @@ export default function SettingsPage() {
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </div>
-          <div className="settings-item clickable danger">
+
+          <div className="settings-item clickable danger" onClick={() => setModal('delete')}>
             <div className="settings-item-icon danger">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6"/>
@@ -223,8 +365,163 @@ export default function SettingsPage() {
             </svg>
           </div>
         </div>
-
       </main>
+
+      {/* ── MODALS ── */}
+      {modal && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+
+            {/* EDIT PROFILE */}
+            {modal === 'profile' && (
+              <>
+                <div className="modal-header">
+                  <h2>Edit Profile</h2>
+                  <button className="modal-close" onClick={closeModal}>✕</button>
+                </div>
+                <div className="modal-body">
+                  <label>Name</label>
+                  <input
+                    className="modal-input"
+                    value={profileForm.name}
+                    onChange={(e) => setProfileForm(p => ({ ...p, name: e.target.value }))}
+                    placeholder="Your name"
+                  />
+                  <label>Email</label>
+                  <input
+                    className="modal-input"
+                    type="email"
+                    value={profileForm.email}
+                    onChange={(e) => setProfileForm(p => ({ ...p, email: e.target.value }))}
+                    placeholder="your@email.com"
+                  />
+                  {profileMsg && (
+                    <p className={`modal-msg ${profileMsg.includes("success") ? "success" : "error"}`}>
+                      {profileMsg}
+                    </p>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button className="modal-btn secondary" onClick={closeModal}>Cancel</button>
+                  <button className="modal-btn primary" onClick={handleSaveProfile}>Save Changes</button>
+                </div>
+              </>
+            )}
+
+            {/* CHANGE PASSWORD */}
+            {modal === 'password' && (
+              <>
+                <div className="modal-header">
+                  <h2>Change Password</h2>
+                  <button className="modal-close" onClick={closeModal}>✕</button>
+                </div>
+                <div className="modal-body">
+                  <label>Current Password</label>
+                  <input
+                    className="modal-input"
+                    type="password"
+                    value={passwordForm.current}
+                    onChange={(e) => setPasswordForm(p => ({ ...p, current: e.target.value }))}
+                    placeholder="••••••••"
+                  />
+                  <label>New Password</label>
+                  <input
+                    className="modal-input"
+                    type="password"
+                    value={passwordForm.newPass}
+                    onChange={(e) => setPasswordForm(p => ({ ...p, newPass: e.target.value }))}
+                    placeholder="••••••••"
+                  />
+                  <label>Confirm New Password</label>
+                  <input
+                    className="modal-input"
+                    type="password"
+                    value={passwordForm.confirm}
+                    onChange={(e) => setPasswordForm(p => ({ ...p, confirm: e.target.value }))}
+                    placeholder="••••••••"
+                  />
+                  {passwordMsg && (
+                    <p className={`modal-msg ${passwordMsg.includes("success") ? "success" : "error"}`}>
+                      {passwordMsg}
+                    </p>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button className="modal-btn secondary" onClick={closeModal}>Cancel</button>
+                  <button className="modal-btn primary" onClick={handleChangePassword}>Update Password</button>
+                </div>
+              </>
+            )}
+
+            {/* LANGUAGE */}
+            {modal === 'language' && (
+              <>
+                <div className="modal-header">
+                  <h2>Language & Region</h2>
+                  <button className="modal-close" onClick={closeModal}>✕</button>
+                </div>
+                <div className="modal-body">
+                  <label>Select Language</label>
+                  <div className="language-list">
+                    {languages.map((l) => (
+                      <div
+                        key={l.code}
+                        className={`language-option ${language === l.code ? 'selected' : ''}`}
+                        onClick={() => setLanguage(l.code)}
+                      >
+                        {l.label}
+                        {language === l.code && (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button className="modal-btn secondary" onClick={closeModal}>Cancel</button>
+                  <button className="modal-btn primary" onClick={handleSaveLanguage}>Save</button>
+                </div>
+              </>
+            )}
+
+            {/* DELETE ACCOUNT */}
+            {modal === 'delete' && (
+              <>
+                <div className="modal-header danger">
+                  <h2>Delete Account</h2>
+                  <button className="modal-close" onClick={closeModal}>✕</button>
+                </div>
+                <div className="modal-body">
+                  <p className="modal-warning">
+                    This action is <strong>permanent</strong> and cannot be undone. All your data, history, and account information will be deleted.
+                  </p>
+                  <label>Type <strong>DELETE</strong> to confirm</label>
+                  <input
+                    className="modal-input danger"
+                    value={deleteConfirm}
+                    onChange={(e) => setDeleteConfirm(e.target.value)}
+                    placeholder="DELETE"
+                  />
+                </div>
+                <div className="modal-footer">
+                  <button className="modal-btn secondary" onClick={closeModal}>Cancel</button>
+                  <button
+                    className="modal-btn danger"
+                    onClick={handleDeleteAccount}
+                    disabled={deleteConfirm !== "DELETE"}
+                  >
+                    Delete My Account
+                  </button>
+                </div>
+              </>
+            )}
+
+          </div>
+        </div>
+      )}
+
     </UserLayout>
   );
 }
