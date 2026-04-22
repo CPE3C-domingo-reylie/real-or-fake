@@ -368,3 +368,68 @@
   overflow: hidden;
   margin-top: 6px;
 }
+
+/* Add to the existing light-mode block in user-layout.css */
+
+[data-theme="light"] .user-header {
+  background: rgba(255, 255, 255, 0.85);
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .header-nav-item {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] .header-nav-item:hover {
+  color: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .header-nav-item.active {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+[data-theme="light"] .user-avatar-sm {
+  background: linear-gradient(135deg, #6366f1, #22d3ee);
+  /* already has white text so it stays visible */
+}
+
+[data-theme="light"] .account-menu {
+  background: white;
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .account-menu-name {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+[data-theme="light"] .account-menu-email {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] .account-menu-divider {
+  border-top-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .account-menu-item {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="light"] .account-menu-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: black;
+}
+
+[data-theme="light"] .menu-btn span {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] .sidebar-user-info:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .sidebar-chevron {
+  color: rgba(0, 0, 0, 0.3);
+}

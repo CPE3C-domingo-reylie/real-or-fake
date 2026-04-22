@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "../../styles/footer.css";
+import logo from "../../assets/images/logo.png";
 
 export default function Footer() {
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -11,12 +12,7 @@ export default function Footer() {
         {/* LEFT */}
         <div className="footer-left">
           <div className="footer-logo">
-            <div className="footer-logo-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 12l2 2 4-4"/>
-                <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
-              </svg>
-            </div>
+            <img src={logo} alt="VeriFake" className="footer-logo-img" />
             <span className="footer-logo-text">VeriFake</span>
           </div>
           <p className="footer-desc">
@@ -49,11 +45,11 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* RIGHT — RESOURCES */}
+        {/* RIGHT */}
         <div className="footer-right">
           <h4 className="footer-col-title">Resources</h4>
           <div className="footer-links">
-            <a href="#" className="footer-link">API Documentation</a>
+            <Link to="/api-docs" className="footer-link">API Documentation</Link>
             <Link to="/help-center" className="footer-link">Help Center</Link>
             <Link to="/terms" className="footer-link">Terms & Conditions</Link>
             <Link to="/privacy" className="footer-link">Privacy Policy</Link>

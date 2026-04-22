@@ -1,5 +1,6 @@
 import Layout from "../assets/components/Layout";
 import "../styles/about.css";
+import storyImage from "../assets/images/logo.png"; // update filename to your actual image
 
 export default function AboutPage() {
   return (
@@ -72,18 +73,11 @@ export default function AboutPage() {
         <div className="about-story">
           <div className="story-text">
             <h2>Our Story</h2>
-            <p>VeriFake was founded in 2024 with a simple mission: to combat the spread of misinformation in the digital age. In a world where false information can spread faster than truth, we believe everyone deserves access to accurate, verified facts.</p>
-            <p>Our team of developers, journalists, and AI researchers came together to build a platform that makes fact-checking fast, reliable, and accessible to everyone.</p>
+            <p>VeriFake was founded in 2026 with a simple mission: to combat the spread of misinformation in the digital age. In a world where false information can spread faster than truth, we believe everyone deserves access to accurate, verified facts.</p>
+            <p>Our team of developers, designers, and researchers, came together to build a platform that makes fact-checking fast, reliable, and accessible to everyone.</p>
           </div>
           <div className="story-image">
-            <div className="story-placeholder">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21 15 16 10 5 21" />
-              </svg>
-              <span>Image placeholder</span>
-            </div>
+            <img src={storyImage} alt="Our story" className="story-img" />
           </div>
         </div>
 
@@ -94,17 +88,14 @@ export default function AboutPage() {
           <div className="team-grid">
 
             {[
-              { name: "Reylie K. Domingo", role: "Computer Engineering Student", email: "email@placeholder.com" },
-              { name: "Andre Dennise Eugenio", role: "Computer Engineering Student", email: "email@placeholder.com" },
-              { name: "Clark S. San Pedro", role: "Computer Engineering Student", email: "email@placeholder.com" },
-              { name: "Denver Lyndon Aerol S. San Diego", role: "Computer Engineering Student", email: "denverlyndonaerolsandiego@gmail.com" },
+              { name: "Reylie K. Domingo", role: "Computer Engineering Student", email: "reylie.domingo987@gmail.com", img: "/src/assets/images/reylie.png" },
+              { name: "Andre Dennise Eugenio", role: "Computer Engineering Student", email: "andreeugenio7604@gmail.com", img: "/src/assets/images/andre.png" },
+              { name: "Clark S. San Pedro", role: "Computer Engineering Student", email: "clarksp28@gmail.com", img: "/src/assets/images/clark.png" },
+              { name: "Denver Lyndon Aerol S. San Diego", role: "Computer Engineering Student", email: "denverlyndonaerolsandiego@gmail.com", img: "/src/assets/images/denver.jpg" },
             ].map((member, i) => (
               <div className="team-card" key={i}>
                 <div className="team-avatar">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                  </svg>
+                  <img src={member.img} alt={member.name} className="team-avatar-img" />
                 </div>
                 <h3 className="team-name">{member.name}</h3>
                 <p className="team-role">{member.role}</p>
