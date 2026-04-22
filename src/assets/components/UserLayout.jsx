@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../styles/user-layout.css";
-import logo from "../../assets/logo.png";
+import logo from "../../assets/images/logo.png";
 
 export default function UserLayout({ children }) {
   const canvasRef = useRef(null);
