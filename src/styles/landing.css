@@ -397,3 +397,80 @@
   border-color: rgba(99, 102, 241, 0.6);
   background: rgba(99, 102, 241, 0.08);
 }
+
+/* LIGHT MODE OVERRIDES */
+[data-theme="light"] .check-dropdown {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .check-tabs {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .check-tab {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] .check-url-input {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.75);
+}
+
+[data-theme="light"] .check-url-input::placeholder {
+  color: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .check-url-input:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+[data-theme="light"] .check-tab-content label {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] .upload-area {
+  border-color: rgba(0, 0, 0, 0.15);
+  color: rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="light"] .upload-area svg {
+  color: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .upload-area span,
+[data-theme="light"] .upload-area small {
+  color: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .recent-title {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+[data-theme="light"] .check-item {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .check-item:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+[data-theme="light"] .check-query {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+[data-theme="light"] .check-type {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="light"] .check-date {
+  color: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .image-filename {
+  color: rgba(0, 0, 0, 0.4);
+}
