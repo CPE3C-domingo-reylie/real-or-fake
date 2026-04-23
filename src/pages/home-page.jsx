@@ -18,7 +18,7 @@ export default function HomePage() {
       setShowLoginPopup(true);
       return;
     }
-    navigate('/landing');
+    navigate('/');
   };
 
   useEffect(() => {
