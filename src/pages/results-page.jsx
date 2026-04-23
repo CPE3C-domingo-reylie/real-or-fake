@@ -212,6 +212,8 @@ export default function ResultsPage() {
 
         {/* HEADER */}
         <div className="results-header">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
           <h1 className="results-title">Fact-Check Results</h1>
           <p className="results-query">Analyzing "<strong>{q}</strong>" across multiple sources</p>
         </div>
@@ -327,77 +329,80 @@ export default function ResultsPage() {
                   ))}
                 </div>
               )}
+               {activeTab === 'sentiment' && (
+    <div className="sentiment">
 
-              {activeTab === 'sentiment' && (
-                <div className="sentiment">
-                  <div className="chart-card">
-                    <h4>Overall Sentiment Distribution</h4>
-                    <div style={{ height: 260 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={overallSentiment}
-                            dataKey="value"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={90}
-                            stroke="none"
-                            label={({ name, value }) => `${name}: ${value}%`}
-                            labelLine={false}
-                          >
-                            {overallSentiment.map((entry, i) => (
-                              <Cell key={i} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{
-                              background: 'rgba(8,14,35,0.95)',
-                              border: '1px solid rgba(255,255,255,0.1)',
-                              borderRadius: '8px',
-                              color: '#e2e8f0'
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+      {/* PIE CHART */}
+      <div className="chart-card">
+        <h4>Overall Sentiment Distribution</h4>
+        <div style={{ height: 280 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={overallSentiment}
+                dataKey="value"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                stroke="none"
+                label={({ name, value }) => `${name}: ${value}%`}
+                labelLine={true}
+              >
+                {overallSentiment.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  background: 'rgba(8,14,35,0.95)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  color: '#e2e8f0'
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
-                  <div className="chart-card">
-                    <h4>Overall Sentiment Distribution</h4>
-                    <div style={{ width: '100%', height: 280 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={overallSentiment}
-                            dataKey="value"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={100}
-                            stroke="none"
-                            label={({ name, value }) => `${name}: ${value}%`}
-                            labelLine={true}
-                          >
-                            {overallSentiment.map((entry, i) => (
-                              <Cell key={i} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{
-                              background: 'rgba(8,14,35,0.95)',
-                              border: '1px solid rgba(255,255,255,0.1)',
-                              borderRadius: '8px',
-                              color: '#e2e8f0'
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+      {/* BAR CHART */}
+      <div className="chart-card">
+        <h4>Sentiment by Source</h4>
+        <div style={{ height: 280 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={sentimentData} margin={{ top: 10, right: 20, left: 0, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+              <XAxis
+                dataKey="source"
+                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                angle={-35}
+                textAnchor="end"
+              />
+              <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
+              <Tooltip
+                contentStyle={{
+                  background: 'rgba(8,14,35,0.95)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  color: '#e2e8f0'
+                }}
+              />
+              <Legend wrapperStyle={{ color: '#94a3b8' }} />
+              <Bar dataKey="positive" fill="#22c55e" name="Positive" />
+              <Bar dataKey="neutral" fill="#64748b" name="Neutral" />
+              <Bar dataKey="negative" fill="#ef4444" name="Negative" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
                 </div>
               )}
+
             </div>
           </section>
         )}
+
       </div>
     </UserLayout>
   );

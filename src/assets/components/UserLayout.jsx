@@ -83,8 +83,7 @@ export default function UserLayout({ children }) {
   }, []);
 
   const navLinks = [
-    { to: "/landing", label: "Home" },
-    { to: "/dashboard", label: "Dashboard" },
+    { to: "/", label: "Home" },
     { to: "/history", label: "History" },
   ];
 
@@ -94,7 +93,7 @@ export default function UserLayout({ children }) {
 
       {/* HEADER */}
       <header className="user-header">
-        <Link to="/landing" className="logo-wrap">
+        <Link to="/" className="logo-wrap">
           <img src={logo} alt="VeriFake" className="logo-img" />
           <span className="logo-text">VeriFake</span>
         </Link>
