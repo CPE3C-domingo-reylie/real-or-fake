@@ -44,12 +44,42 @@ export default function SettingsPage() {
   // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState("");
 
+  // 2FA State
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [twoFAPin, setTwoFAPin] = useState('');
+  const [twoFAConfirmPin, setTwoFAConfirmPin] = useState('');
+  const [twoFAMessage, setTwoFAMessage] = useState('');
+  const [twoFALoading, setTwoFALoading] = useState(false);
+
   useEffect(() => {
     document.documentElement.setAttribute(
       'data-theme',
       settings.darkMode ? 'dark' : 'light'
     );
   }, [settings.darkMode]);
+
+  useEffect(() => {
+    // Fetch 2FA status
+    const fetch2FAStatus = async () => {
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/2fa-status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (data.twoFactorEnabled !== undefined) {
+          setTwoFactorEnabled(data.twoFactorEnabled);
+        }
+      } catch (err) {
+        console.error('Failed to fetch 2FA status:', err);
+      }
+    };
+    
+    fetch2FAStatus();
+  }, []);
 
   const toggle = (key) => setSettings(prev => {
     const next = { ...prev, [key]: !prev[key] };
@@ -151,7 +181,7 @@ export default function SettingsPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      alert("Failed to download data.");
+      console.log("Failed to download data.");
     }
   };
 
@@ -169,6 +199,87 @@ export default function SettingsPage() {
     localStorage.removeItem("authUser");
     localStorage.removeItem("verifake-settings");
     navigate("/");
+  };
+
+  // 2FA Functions
+  const handleToggle2FA = () => {
+    if (!twoFactorEnabled) {
+      setShow2FAModal(true);
+    } else {
+      handleDisable2FA();
+    }
+  };
+
+  const handleEnable2FA = async () => {
+    if (twoFAPin !== twoFAConfirmPin) {
+      setTwoFAMessage("PINs do not match");
+      return;
+    }
+    
+    if (!/^\d{6}$/.test(twoFAPin)) {
+      setTwoFAMessage("PIN must be exactly 6 digits");
+      return;
+    }
+    
+    setTwoFALoading(true);
+    const token = localStorage.getItem("authToken");
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/setup-2fa`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ pin: twoFAPin, enable: true }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        setTwoFactorEnabled(true);
+        setShow2FAModal(false);
+        setTwoFAPin('');
+        setTwoFAConfirmPin('');
+        setTwoFAMessage('');
+        console.log("2FA has been enabled successfully!");
+      } else {
+        setTwoFAMessage(data.error || "Failed to enable 2FA");
+      }
+    } catch (err) {
+      setTwoFAMessage("Failed to connect to server");
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    if (!confirm("Are you sure you want to disable two-factor authentication? This will make your account less secure.")) {
+      return;
+    }
+    
+    const token = localStorage.getItem("authToken");
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/setup-2fa`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ enable: false }),
+      });
+      
+      if (res.ok) {
+        setTwoFactorEnabled(false);
+        console.log("2FA has been disabled successfully!");
+      } else {
+        const data = await res.json();
+        console.log(data.error || "Failed to disable 2FA");
+      }
+    } catch (err) {
+      console.log("Failed to connect to server");
+    }
   };
 
   const languages = [
@@ -254,6 +365,33 @@ export default function SettingsPage() {
               </button>
             </div>
           ))}
+        </div>
+
+        {/* SECURITY - 2FA SECTION */}
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <div className="settings-section-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="M12 8v4"/>
+                <path d="M12 16h.01"/>
+              </svg>
+            </div>
+            <h2>Security</h2>
+          </div>
+          
+          <div className="settings-item">
+            <div>
+              <h3>Two-Factor Authentication (2FA)</h3>
+              <p>Add an extra layer of security to your account with a 6-digit PIN</p>
+            </div>
+            <button 
+              className={`toggle ${twoFactorEnabled ? 'on' : ''}`} 
+              onClick={handleToggle2FA}
+            >
+              <div className="toggle-thumb" />
+            </button>
+          </div>
         </div>
 
         {/* ACCOUNT */}
@@ -517,11 +655,65 @@ export default function SettingsPage() {
                 </div>
               </>
             )}
-
           </div>
         </div>
       )}
 
+      {/* 2FA SETUP MODAL */}
+      {show2FAModal && (
+        <div className="modal-overlay" onClick={() => setShow2FAModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Enable Two-Factor Authentication</h2>
+              <button className="modal-close" onClick={() => setShow2FAModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p className="modal-warning" style={{ marginBottom: '16px' }}>
+                <strong>Important:</strong> Set up a 6-digit PIN that you'll need to enter every time you log in.
+                Store this PIN somewhere safe - you'll need it for future logins!
+              </p>
+              
+              <label>Set 6-digit PIN</label>
+              <input
+                className="modal-input"
+                type="password"
+                maxLength="6"
+                pattern="\d*"
+                placeholder="Enter 6-digit PIN"
+                value={twoFAPin}
+                onChange={(e) => setTwoFAPin(e.target.value.replace(/\D/g, ''))}
+              />
+              
+              <label>Confirm PIN</label>
+              <input
+                className="modal-input"
+                type="password"
+                maxLength="6"
+                pattern="\d*"
+                placeholder="Confirm 6-digit PIN"
+                value={twoFAConfirmPin}
+                onChange={(e) => setTwoFAConfirmPin(e.target.value.replace(/\D/g, ''))}
+              />
+              
+              {twoFAMessage && (
+                <p className="modal-msg error">{twoFAMessage}</p>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="modal-btn secondary" onClick={() => setShow2FAModal(false)}>
+                Cancel
+              </button>
+              <button 
+                className="modal-btn primary" 
+                onClick={handleEnable2FA}
+                disabled={twoFALoading}
+              >
+                {twoFALoading ? "Enabling..." : "Enable 2FA"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </UserLayout>
   );
 }
